@@ -560,49 +560,111 @@ namespace ISEMES.Repositories
         {
             var trayVendor = new List<TrayVendor>();
 
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryConnection")))
+            try
             {
-                await connection.OpenAsync();
-                using (var command = new SqlCommand("INV_GetTrayVendor", connection))
+                using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryConnection")))
                 {
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("@CustomerId", customerId);
-                    using (var reader = await command.ExecuteReaderAsync())
+                    await connection.OpenAsync();
+                    using (var command = new SqlCommand("INV_GetTrayVendor", connection))
                     {
-                        while (await reader.ReadAsync())
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@CustomerId", customerId);
+                        using (var reader = await command.ExecuteReaderAsync())
                         {
-                            trayVendor.Add(new TrayVendor
+                            while (await reader.ReadAsync())
                             {
-                                TrayVendorId = reader.GetInt32(0),
-                                VendorName = reader.GetString(1)
-                            });
+                                // Handle potential null values
+                                var trayVendorId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0);
+                                var vendorName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1);
+
+                                trayVendor.Add(new TrayVendor
+                                {
+                                    TrayVendorId = trayVendorId,
+                                    VendorName = vendorName ?? string.Empty
+                                });
+                            }
                         }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                // Log the error for debugging
+                Console.WriteLine($"Error in GetInventoryReceiptTrayVendorAsync: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                throw;
             }
 
             return trayVendor;
         }
 
-        public async Task<List<TrayPart>> GetInventoryReceiptTraysByVendorIdAsync(int customerId, int deviceFamilyId)
+        public async Task<List<TrayPart>> GetInventoryReceiptTraysByVendorIdAsync(int customerId, int vendorId)
         {
             var trayPart = new List<TrayPart>();
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryConnection")))
+            try
             {
-                await connection.OpenAsync();
-                using (var command = new SqlCommand("INV_GetTrays_ByVendorId", connection))
+                using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryConnection")))
                 {
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("@CustomerId", customerId);
-                    command.Parameters.AddWithValue("@VendorId", deviceFamilyId);
-                    using (var reader = await command.ExecuteReaderAsync())
+                    await connection.OpenAsync();
+                    using (var command = new SqlCommand("INV_GetTrays_ByVendorId", connection))
                     {
-                        while (await reader.ReadAsync())
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@CustomerId", customerId);
+                        command.Parameters.AddWithValue("@VendorId", vendorId);
+                        using (var reader = await command.ExecuteReaderAsync())
                         {
-                            trayPart.Add(new TrayPart { TrayPartId = reader.GetInt32(0), TrayNumber = reader.GetString(2) });
+                            while (await reader.ReadAsync())
+                            {
+                                try
+                                {
+                                    // Use GetOrdinal to safely get column indices, with fallback to index-based access
+                                    int trayPartIdOrdinal = -1;
+                                    int trayNumberOrdinal = -1;
+                                    
+                                    try
+                                    {
+                                        trayPartIdOrdinal = reader.GetOrdinal("TrayPartId");
+                                    }
+                                    catch
+                                    {
+                                        // Fallback to index 0 if column name not found
+                                        trayPartIdOrdinal = 0;
+                                    }
+                                    
+                                    try
+                                    {
+                                        trayNumberOrdinal = reader.GetOrdinal("TrayNumber");
+                                    }
+                                    catch
+                                    {
+                                        // Fallback to index 2 if column name not found
+                                        trayNumberOrdinal = 2;
+                                    }
+                                    
+                                    var trayPartItem = new TrayPart
+                                    {
+                                        TrayPartId = reader.IsDBNull(trayPartIdOrdinal) ? 0 : reader.GetInt32(trayPartIdOrdinal),
+                                        TrayNumber = reader.IsDBNull(trayNumberOrdinal) ? "" : reader.GetString(trayNumberOrdinal)
+                                    };
+                                    
+                                    trayPart.Add(trayPartItem);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Error processing row in GetInventoryReceiptTraysByVendorIdAsync: {ex.Message}");
+                                    Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                                    continue;
+                                }
+                            }
                         }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetInventoryReceiptTraysByVendorIdAsync: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                throw;
             }
             return trayPart;
         }

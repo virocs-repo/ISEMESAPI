@@ -162,9 +162,9 @@ namespace ISEMES.Services
             return await _repository.GetInventoryReceiptTrayVendorAsync(customerId);
         }
 
-        public async Task<List<TrayPart>> GetInventoryReceiptTraysByVendorIdAsync(int customerId, int deviceFamilyId)
+        public async Task<List<TrayPart>> GetInventoryReceiptTraysByVendorIdAsync(int customerId, int vendorId)
         {
-            return await _repository.GetInventoryReceiptTraysByVendorIdAsync(customerId, deviceFamilyId);
+            return await _repository.GetInventoryReceiptTraysByVendorIdAsync(customerId, vendorId);
         }
 
         public async Task<List<PurchaseOrder>> GetPurchaseOrdersAsync(int customerId, int? divisionId, bool? isFreezed)

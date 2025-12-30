@@ -9,7 +9,7 @@ namespace ISEMES.Repositories
         Task<List<TFSCustomer>> GetTFSCustomers();
         Task<List<TFSDeviceFamily>> GetDeviceFamilies(int customerId);
         Task<List<TFSDevice>> GetDevices(int customerId, int? deviceFamiltyId, int? deviceId);
-        Task<List<TFSDeviceAlias>> GetDeviceAlias(int customerId, int deviceFamiltyId, int deviceId, string? source);
+        Task<List<TFSDeviceAlias>> GetDeviceAlias(int customerId, int deviceFamilyId, int deviceId, string? source);
         Task<List<LotOwner>> GetLotOwners();
         Task<List<LotSearch>> InventoryLotSearch(string? travellerStatusIds, string? lotStatusIds, DateTime? fromDate, DateTime? toDate);
         Task<LotDetail> GetInventoryLot(int lotId, string source);
