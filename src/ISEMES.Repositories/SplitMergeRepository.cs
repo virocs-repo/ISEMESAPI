@@ -134,17 +134,28 @@ namespace ISEMES.Repositories
             return result;
         }
 
-        public async Task<List<TFSDeviceAlias>> GetDeviceAlias(int customerId, int deviceFamiltyId, int deviceId, string? source)
+        public async Task<List<TFSDeviceAlias>> GetDeviceAlias(int customerId, int deviceFamilyId, int deviceId, string? source)
         {
             List<TFSDeviceAlias> result = new List<TFSDeviceAlias>();
             using (var connection = new SqlConnection(_connectString))
             {
-                using (var command = new SqlCommand("PRD_P_GetDeviceAlias", connection))
+                // Use PRD_Device_Alias_P_Get to match TFS behavior (same as GetAllDevicesAliasNames in TFS)
+                using (var command = new SqlCommand("PRD_Device_Alias_P_Get", connection))
                 {
                     command.CommandType = CommandType.StoredProcedure;
                     command.Parameters.AddWithValue("@CustomerId", customerId);
-                    command.Parameters.AddWithValue("@DeviceFamilyId", deviceFamiltyId);
-                    command.Parameters.AddWithValue("@DeviceId", deviceId);
+                    
+                    if (deviceFamilyId > 0)
+                        command.Parameters.AddWithValue("@DeviceFamilyId", deviceFamilyId);
+                    else
+                        command.Parameters.AddWithValue("@DeviceFamilyId", DBNull.Value);
+                    
+                    // DeviceId can be VarChar in the stored procedure, pass as string or DBNull
+                    if (deviceId > 0)
+                        command.Parameters.AddWithValue("@DeviceId", deviceId.ToString());
+                    else
+                        command.Parameters.AddWithValue("@DeviceId", DBNull.Value);
+                    
                     command.Parameters.AddWithValue("@Source", source ?? (object)DBNull.Value);
                     await connection.OpenAsync();
                     using (var reader = await command.ExecuteReaderAsync())
@@ -191,47 +202,67 @@ namespace ISEMES.Repositories
         public async Task<List<LotSearch>> InventoryLotSearch(string? travellerStatusIds, string? lotStatusIds, DateTime? fromDate, DateTime? toDate)
         {
             List<LotSearch> result = new List<LotSearch>();
-            using (var connection = new SqlConnection(_inventoryConnectString))
+            try
             {
-                using (var command = new SqlCommand("Inv_Lot_Search", connection))
+                using (var connection = new SqlConnection(_inventoryConnectString))
                 {
-                    command.CommandType = CommandType.StoredProcedure;
-
-                    command.Parameters.AddWithValue("@TravStatusIds", travellerStatusIds);
-                    command.Parameters.AddWithValue("@LotStatusIds", lotStatusIds);
-                    command.Parameters.AddWithValue("@FromDate", fromDate);
-                    command.Parameters.AddWithValue("@ToDate", toDate);
-                    await connection.OpenAsync();
-
-                    using (var reader = await command.ExecuteReaderAsync())
+                    using (var command = new SqlCommand("Inv_Lot_Search", connection))
                     {
-                        while (await reader.ReadAsync())
-                        {
-                            var record = new LotSearch();
-                            record.LotId = reader.GetInt32("LotId");
-                            record.CustomerName = reader.IsDBNull(reader.GetOrdinal("CustomerName")) ? "" : reader.GetString("CustomerName");
-                            record.ISELotNumber = reader.IsDBNull(reader.GetOrdinal("ISELotNumber")) ? "" : reader.GetString("ISELotNumber");
-                            record.DeviceFamily = reader.IsDBNull(reader.GetOrdinal("DeviceFamily")) ? "" : reader.GetString("DeviceFamily");
-                            record.Device = reader.IsDBNull(reader.GetOrdinal("Device")) ? "" : reader.GetString("Device");
-                            record.TravelerStatus = reader.IsDBNull(reader.GetOrdinal("TravelerStatus")) ? "" : reader.GetString("TravelerStatus");
-                            record.LotStatus = reader.IsDBNull(reader.GetOrdinal("LotStatus")) ? "" : reader.GetString("LotStatus");
-                            record.CustomerLotNumber = reader.IsDBNull(reader.GetOrdinal("CustomerLotNumber")) ? "" : reader.GetString("CustomerLotNumber");
-                            record.ExpectedCount = reader.IsDBNull(reader.GetOrdinal("ExpectedCount")) ? null : reader.GetInt32("ExpectedCount");
-                            record.RunningCount = reader.IsDBNull(reader.GetOrdinal("RunningCount")) ? null : reader.GetInt32("RunningCount");
-                            record.LotQty = reader.IsDBNull(reader.GetOrdinal("LotQty")) ? null : reader.GetInt32("LotQty");
-                            record.ExpectedDate = reader.IsDBNull(reader.GetOrdinal("ExpectedDate")) ? "" : reader.GetString("ExpectedDate");
-                            record.Identifier = reader.IsDBNull(reader.GetOrdinal("Identifier")) ? "" : reader.GetString("Identifier");
-                            record.ReceivingNo = reader.IsDBNull(reader.GetOrdinal("ReceivingNo")) ? "" : reader.GetString("ReceivingNo");
-                            record.ShippingMethod = reader.IsDBNull(reader.GetOrdinal("ShippingMethod")) ? "" : reader.GetString("ShippingMethod");
-                            record.SOStatus = reader.IsDBNull(reader.GetOrdinal("SOStatus")) ? "" : reader.GetString("SOStatus");
-                            record.CurrentStep = reader.IsDBNull(reader.GetOrdinal("CurrentStep")) ? "" : reader.GetString("CurrentStep");
-                            record.NextStep = reader.IsDBNull(reader.GetOrdinal("NextStep")) ? "" : reader.GetString("NextStep");
-                            record.CurrentLocation = reader.IsDBNull(reader.GetOrdinal("CurrentLocation")) ? "" : reader.GetString("CurrentLocation");
+                        command.CommandType = CommandType.StoredProcedure;
 
-                            result.Add(record);
+                        // Handle null parameters - SQL Server requires DBNull.Value for nulls
+                        command.Parameters.AddWithValue("@TravStatusIds", travellerStatusIds ?? (object)DBNull.Value);
+                        command.Parameters.AddWithValue("@LotStatusIds", lotStatusIds ?? (object)DBNull.Value);
+                        command.Parameters.AddWithValue("@FromDate", fromDate.HasValue ? (object)fromDate.Value : DBNull.Value);
+                        command.Parameters.AddWithValue("@ToDate", toDate.HasValue ? (object)toDate.Value : DBNull.Value);
+                        
+                        await connection.OpenAsync();
+
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                try
+                                {
+                                    var record = new LotSearch();
+                                    record.LotId = reader.GetInt32(reader.GetOrdinal("LotId"));
+                                    record.CustomerName = reader.IsDBNull(reader.GetOrdinal("CustomerName")) ? "" : reader.GetString(reader.GetOrdinal("CustomerName"));
+                                    record.ISELotNumber = reader.IsDBNull(reader.GetOrdinal("ISELotNumber")) ? "" : reader.GetString(reader.GetOrdinal("ISELotNumber"));
+                                    record.DeviceFamily = reader.IsDBNull(reader.GetOrdinal("DeviceFamily")) ? "" : reader.GetString(reader.GetOrdinal("DeviceFamily"));
+                                    record.Device = reader.IsDBNull(reader.GetOrdinal("Device")) ? "" : reader.GetString(reader.GetOrdinal("Device"));
+                                    record.TravelerStatus = reader.IsDBNull(reader.GetOrdinal("TravelerStatus")) ? "" : reader.GetString(reader.GetOrdinal("TravelerStatus"));
+                                    record.LotStatus = reader.IsDBNull(reader.GetOrdinal("LotStatus")) ? "" : reader.GetString(reader.GetOrdinal("LotStatus"));
+                                    record.CustomerLotNumber = reader.IsDBNull(reader.GetOrdinal("CustomerLotNumber")) ? "" : reader.GetString(reader.GetOrdinal("CustomerLotNumber"));
+                                    record.ExpectedCount = reader.IsDBNull(reader.GetOrdinal("ExpectedCount")) ? null : reader.GetInt32(reader.GetOrdinal("ExpectedCount"));
+                                    record.RunningCount = reader.IsDBNull(reader.GetOrdinal("RunningCount")) ? null : reader.GetInt32(reader.GetOrdinal("RunningCount"));
+                                    record.LotQty = reader.IsDBNull(reader.GetOrdinal("LotQty")) ? null : reader.GetInt32(reader.GetOrdinal("LotQty"));
+                                    record.ExpectedDate = reader.IsDBNull(reader.GetOrdinal("ExpectedDate")) ? "" : reader.GetString(reader.GetOrdinal("ExpectedDate"));
+                                    record.Identifier = reader.IsDBNull(reader.GetOrdinal("Identifier")) ? "" : reader.GetString(reader.GetOrdinal("Identifier"));
+                                    record.ReceivingNo = reader.IsDBNull(reader.GetOrdinal("ReceivingNo")) ? "" : reader.GetString(reader.GetOrdinal("ReceivingNo"));
+                                    record.ShippingMethod = reader.IsDBNull(reader.GetOrdinal("ShippingMethod")) ? "" : reader.GetString(reader.GetOrdinal("ShippingMethod"));
+                                    record.SOStatus = reader.IsDBNull(reader.GetOrdinal("SOStatus")) ? "" : reader.GetString(reader.GetOrdinal("SOStatus"));
+                                    record.CurrentStep = reader.IsDBNull(reader.GetOrdinal("CurrentStep")) ? "" : reader.GetString(reader.GetOrdinal("CurrentStep"));
+                                    record.NextStep = reader.IsDBNull(reader.GetOrdinal("NextStep")) ? "" : reader.GetString(reader.GetOrdinal("NextStep"));
+                                    record.CurrentLocation = reader.IsDBNull(reader.GetOrdinal("CurrentLocation")) ? "" : reader.GetString(reader.GetOrdinal("CurrentLocation"));
+
+                                    result.Add(record);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Error processing row in InventoryLotSearch: {ex.Message}");
+                                    Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                                    continue;
+                                }
+                            }
                         }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in InventoryLotSearch: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                throw;
             }
             return result;
         }

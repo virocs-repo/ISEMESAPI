@@ -37,9 +37,9 @@ namespace ISEMES.Services
             return await _splitMergeRepository.GetDevices(customerId, deviceFamiltyId, deviceId);
         }
 
-        public async Task<List<TFSDeviceAlias>> GetDeviceAlias(int customerId, int deviceFamiltyId, int deviceId, string? source)
+        public async Task<List<TFSDeviceAlias>> GetDeviceAlias(int customerId, int deviceFamilyId, int deviceId, string? source)
         {
-            return await _splitMergeRepository.GetDeviceAlias(customerId, deviceFamiltyId, deviceId, source);
+            return await _splitMergeRepository.GetDeviceAlias(customerId, deviceFamilyId, deviceId, source);
         }
 
         public async Task<List<LotOwner>> GetLotOwners()

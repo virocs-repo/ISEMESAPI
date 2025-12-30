@@ -53,9 +53,13 @@ namespace ISEMES.API.Controllers
         }
 
         [HttpGet("getDeviceAlias")]
-        public async Task<IActionResult> GetDeviceAlias(int customerId, int deviceFamiltyId, int deviceId, string? source)
+        public async Task<IActionResult> GetDeviceAlias(int customerId, int? deviceFamiltyId, int? deviceId, string? source)
         {
-            var receiptData = await _splitMergeService.GetDeviceAlias(customerId, deviceFamiltyId, deviceId, source);
+            // Handle -1 as null (matching TFS behavior)
+            int deviceFamilyIdToUse = (deviceFamiltyId.HasValue && deviceFamiltyId.Value > 0) ? deviceFamiltyId.Value : 0;
+            int deviceIdToUse = (deviceId.HasValue && deviceId.Value > 0) ? deviceId.Value : 0;
+            
+            var receiptData = await _splitMergeService.GetDeviceAlias(customerId, deviceFamilyIdToUse, deviceIdToUse, source);
             return Ok(receiptData);
         }
 
@@ -69,8 +73,20 @@ namespace ISEMES.API.Controllers
         [HttpGet("inventoryLotSearch")]
         public async Task<IActionResult> InventoryLotSearch(string? travellerStatusIds, string? lotStatusIds, DateTime? fromDate, DateTime? toDate)
         {
-            var receiptData = await _splitMergeService.InventoryLotSearch(travellerStatusIds, lotStatusIds, fromDate, toDate);
-            return Ok(receiptData);
+            try
+            {
+                var receiptData = await _splitMergeService.InventoryLotSearch(travellerStatusIds, lotStatusIds, fromDate, toDate);
+                return Ok(receiptData);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "An error occurred while searching inventory lots.",
+                    Error = ex.Message,
+                    StackTrace = ex.StackTrace
+                });
+            }
         }
 
         [HttpGet("getInventory")]

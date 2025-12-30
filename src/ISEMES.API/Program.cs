@@ -108,6 +108,10 @@ builder.Services.AddScoped<IIntTranferReceivingService, IntTranferReceivingServi
 builder.Services.AddScoped<ISplitMergeRepository, SplitMergeRepository>();
 builder.Services.AddScoped<ISplitMergeService, SplitMergeService>();
 
+// Device Master
+builder.Services.AddScoped<IDeviceMasterRepository, DeviceMasterRepository>();
+builder.Services.AddScoped<IDeviceMasterService, DeviceMasterService>();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -126,6 +130,13 @@ builder.Services.AddSwaggerGen(c =>
         Title = "ISEMES Ticketing API", 
         Version = "v1",
         Description = "API for Ticketing System"
+    });
+    
+    c.SwaggerDoc("devicemaster", new OpenApiInfo 
+    { 
+        Title = "ISEMES Device Master API", 
+        Version = "v1",
+        Description = "API for Device Master Management"
     });
 
     // Configure Swagger to use the Authorization header with Bearer token
@@ -164,6 +175,7 @@ app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/inventory/swagger.json", "ISEMES Inventory API");
     c.SwaggerEndpoint("/swagger/ticketing/swagger.json", "ISEMES Ticketing API");
+    c.SwaggerEndpoint("/swagger/devicemaster/swagger.json", "ISEMES Device Master API");
 });
 
 app.UseHttpsRedirection();

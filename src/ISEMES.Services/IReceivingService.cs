@@ -34,7 +34,7 @@ namespace ISEMES.Services
         Task<List<ServiceCategory>> GetInventoryReceiptServiceCategoryAsync(string ListName);
         Task<List<LotOwners>> GetInventoryReceiptLotOwnersAsync();
         Task<List<TrayVendor>> GetInventoryReceiptTrayVendorAsync(int customerId);
-        Task<List<TrayPart>> GetInventoryReceiptTraysByVendorIdAsync(int customerId, int deviceFamilyId);
+        Task<List<TrayPart>> GetInventoryReceiptTraysByVendorIdAsync(int customerId, int vendorId);
         Task<List<PurchaseOrder>> GetPurchaseOrdersAsync(int customerId, int? divisionId, bool? isFreezed);
         Task<List<PackageCategory>> GetPackageCategoryAsync(string categoryName);
         Task<List<Quotes>> GetQuotesAsync(int customerId);
