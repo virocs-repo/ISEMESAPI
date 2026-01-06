@@ -37,7 +37,6 @@ namespace ISEMES.Models
         public bool IsActive { get; set; } = true;
         public int CreatedBy { get; set; }
         
-        // Device Info fields
         public string? TestDevice { get; set; }
         public string? ReliabilityDevice { get; set; }
         public List<string>? AliasNames { get; set; }
@@ -46,11 +45,10 @@ namespace ISEMES.Models
         [Required]
         public string? LotType { get; set; } = "Standard";
         public bool LabelMapping { get; set; }
-        public string? TrayTubeMapping { get; set; } = "Device"; // "Lot" or "Device"
+        public string? TrayTubeMapping { get; set; } = "Device";
         public int? CountryOfOriginId { get; set; }
         public decimal? UnitCost { get; set; }
         
-        // EAR Info fields
         public int? MaterialDescriptionId { get; set; }
         public int? USHTSCodeId { get; set; }
         public int? ECCNId { get; set; }
@@ -58,7 +56,6 @@ namespace ISEMES.Models
         public int? RestrictedCountriesToShipId { get; set; }
         public bool ScheduleB { get; set; }
         
-        // Pack&Label Info fields
         public int? MSLId { get; set; }
         public int? PeakPackageBodyTemperatureId { get; set; }
         public int? ShelfLifeMonthId { get; set; }
@@ -68,6 +65,18 @@ namespace ISEMES.Models
         public int? ROHSId { get; set; }
         public int? TrayTubeStrappingId { get; set; }
         public int? TrayStackingId { get; set; }
+        
+        public int? LockId { get; set; } = -1;
+        public string? LastModifiedOn { get; set; }
+        
+        public string? Labels { get; set; }
+        public List<LabelInfo>? lstLabelDetails { get; set; }
+    }
+    
+    public class LabelInfo
+    {
+        public string LabelName { get; set; } = string.Empty;
+        public string LabelDetails { get; set; } = string.Empty;
     }
 
     public class DeviceResponse
@@ -92,5 +101,22 @@ namespace ISEMES.Models
     {
         public int? CustomerID { get; set; }
         public string? DeviceFamilyName { get; set; }
+    }
+
+    public class DeviceInfoResponse
+    {
+        public bool CanEdit { get; set; } = true;
+        public string? LastModifiedOn { get; set; }
+        public bool CanEditlotType { get; set; } = true;
+        public bool CanEditLabel1 { get; set; } = true;
+        public bool CanEditLabel2 { get; set; } = true;
+        public bool CanEditLabel3 { get; set; } = true;
+        public bool CanEditLabel4 { get; set; } = true;
+        public bool CanEditLabel5 { get; set; } = true;
+        public List<Dictionary<string, object>> DQP { get; set; } = new List<Dictionary<string, object>>();
+        public List<Dictionary<string, object>> MF { get; set; } = new List<Dictionary<string, object>>();
+        public List<Dictionary<string, object>> TRV { get; set; } = new List<Dictionary<string, object>>();
+        public List<Dictionary<string, object>> Boards { get; set; } = new List<Dictionary<string, object>>();
+        public List<Dictionary<string, object>> DeviceLabelInfo { get; set; } = new List<Dictionary<string, object>>();
     }
 }

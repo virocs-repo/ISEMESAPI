@@ -32,14 +32,14 @@ namespace ISEMES.Services
             {
                 result.Add(new DeviceFamilyResponse
                 {
-                    DeviceFamilyId = row.Table.Columns.Contains("DeviceFamilyId") && row["DeviceFamilyId"] != DBNull.Value ? Convert.ToInt32(row["DeviceFamilyId"]) : 0,
-                    DeviceFamilyName = row.Table.Columns.Contains("DeviceFamily") && row["DeviceFamily"] != DBNull.Value ? row["DeviceFamily"].ToString() ?? string.Empty : string.Empty,
-                    CustomerDeviceFamily = row.Table.Columns.Contains("CustomerDeviceFamily") && row["CustomerDeviceFamily"] != DBNull.Value ? row["CustomerDeviceFamily"].ToString() : string.Empty,
-                    CustomerID = row.Table.Columns.Contains("CustomerId") && row["CustomerId"] != DBNull.Value ? Convert.ToInt32(row["CustomerId"]) : 0,
-                    CustomerName = row.Table.Columns.Contains("CustomerName") && row["CustomerName"] != DBNull.Value ? row["CustomerName"].ToString() ?? string.Empty : string.Empty,
-                    Active = row.Table.Columns.Contains("Active") && row["Active"] != DBNull.Value && Convert.ToBoolean(row["Active"]),
-                    CreatedOn = row.Table.Columns.Contains("CreatedOn") && row["CreatedOn"] != DBNull.Value ? row["CreatedOn"].ToString() ?? string.Empty : string.Empty,
-                    ModifiedOn = row.Table.Columns.Contains("ModifiedOn") && row["ModifiedOn"] != DBNull.Value ? row["ModifiedOn"].ToString() ?? string.Empty : string.Empty
+                    DeviceFamilyId = SafeGetInt32(row, "DeviceFamilyId"),
+                    DeviceFamilyName = SafeGetString(row, "DeviceFamily"),
+                    CustomerDeviceFamily = SafeGetString(row, "CustomerDeviceFamily"),
+                    CustomerID = SafeGetInt32(row, "CustomerId"),
+                    CustomerName = SafeGetString(row, "CustomerName"),
+                    Active = SafeGetBoolean(row, "Active"),
+                    CreatedOn = SafeGetString(row, "CreatedOn"),
+                    ModifiedOn = SafeGetString(row, "ModifiedOn")
                 });
             }
 
@@ -48,87 +48,57 @@ namespace ISEMES.Services
 
         public async Task<List<DeviceResponse>> SearchDevice(int? customerID, int? deviceFamilyId, string? deviceName, bool? active)
         {
-            try
-            {
-                var dataTable = await _repository.SearchDevice(customerID, deviceFamilyId, deviceName, active);
-                var result = new List<DeviceResponse>();
+            var dataTable = await _repository.SearchDevice(customerID, deviceFamilyId, deviceName, active);
+            var result = new List<DeviceResponse>();
 
-                if (dataTable != null && dataTable.Rows != null)
+            if (dataTable != null && dataTable.Rows != null)
+            {
+                foreach (DataRow row in dataTable.Rows)
                 {
-                    // Log available columns for debugging
-                    if (dataTable.Rows.Count > 0)
+                    var aliasNames = SafeGetString(row, "AliasNames") ?? SafeGetString(row, "aliasNames");
+                    var customerDevice = SafeGetString(row, "CustomerDevice") ?? SafeGetString(row, "customerDevice");
+                    var deviceAlias = SafeGetString(row, "DeviceAlias") ?? SafeGetString(row, "deviceAlias");
+                    
+                    if (string.IsNullOrEmpty(deviceAlias) && string.IsNullOrEmpty(customerDevice))
                     {
-                        var columns = string.Join(", ", dataTable.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
-                        Console.WriteLine($"Available columns in Device search result: {columns}");
+                        deviceAlias = SafeGetString(row, "Alias") ?? SafeGetString(row, "alias");
+                        customerDevice = SafeGetString(row, "CustomerDeviceName") ?? SafeGetString(row, "customerDeviceName");
                     }
-
-                    foreach (DataRow row in dataTable.Rows)
+                    
+                    var finalDeviceAlias = !string.IsNullOrEmpty(aliasNames) ? aliasNames : 
+                                          (!string.IsNullOrEmpty(deviceAlias) ? deviceAlias : customerDevice);
+                    
+                    result.Add(new DeviceResponse
                     {
-                        try
-                        {
-                            // Read AliasNames from stored procedure (comma-separated string)
-                            // The stored procedure PRD_Device_P_Search returns AliasNames column
-                            var aliasNames = SafeGetString(row, "AliasNames") ?? SafeGetString(row, "aliasNames");
-                            
-                            // Try multiple possible column names for device alias (fallback)
-                            var customerDevice = SafeGetString(row, "CustomerDevice") ?? SafeGetString(row, "customerDevice");
-                            var deviceAlias = SafeGetString(row, "DeviceAlias") ?? SafeGetString(row, "deviceAlias");
-                            
-                            // If still empty, try other possible column names
-                            if (string.IsNullOrEmpty(deviceAlias) && string.IsNullOrEmpty(customerDevice))
-                            {
-                                deviceAlias = SafeGetString(row, "Alias") ?? SafeGetString(row, "alias");
-                                customerDevice = SafeGetString(row, "CustomerDeviceName") ?? SafeGetString(row, "customerDeviceName");
-                            }
-                            
-                            // Use AliasNames from stored procedure if available, otherwise fallback to DeviceAlias or CustomerDevice
-                            var finalDeviceAlias = !string.IsNullOrEmpty(aliasNames) ? aliasNames : 
-                                                  (!string.IsNullOrEmpty(deviceAlias) ? deviceAlias : customerDevice);
-                            
-                            result.Add(new DeviceResponse
-                            {
-                                DeviceId = SafeGetInt32(row, "DeviceId"),
-                                Device = SafeGetString(row, "Device"),
-                                DeviceFamilyId = SafeGetNullableInt(row, "DeviceFamilyId"),
-                                DeviceFamily = SafeGetString(row, "DeviceFamily"),
-                                CustomerDevice = customerDevice,
-                                CustomerId = SafeGetNullableInt(row, "CustomerId"),
-                                CustomerName = SafeGetString(row, "CustomerName"),
-                                Active = SafeGetBoolean(row, "Active"),
-                                CreatedOn = SafeGetString(row, "CreatedOn"),
-                                ModifiedOn = SafeGetString(row, "ModifiedOn"),
-                                TestDevice = SafeGetString(row, "TestDevice"),
-                                ReliabilityDevice = SafeGetString(row, "ReliabilityDevice"),
-                                // Use AliasNames from stored procedure (comma-separated), or fallback to DeviceAlias/CustomerDevice
-                                DeviceAlias = finalDeviceAlias,
-                                UnitCost = SafeGetNullableDecimal(row, "UnitCost")
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            // Log row-level error and continue with next row
-                            Console.WriteLine($"Error processing row: {ex.Message}");
-                            continue;
-                        }
-                    }
+                        DeviceId = SafeGetInt32(row, "DeviceId"),
+                        Device = SafeGetString(row, "Device"),
+                        DeviceFamilyId = SafeGetNullableInt(row, "DeviceFamilyId"),
+                        DeviceFamily = SafeGetString(row, "DeviceFamily"),
+                        CustomerDevice = customerDevice,
+                        CustomerId = SafeGetNullableInt(row, "CustomerId"),
+                        CustomerName = SafeGetString(row, "CustomerName"),
+                        Active = SafeGetBoolean(row, "Active"),
+                        CreatedOn = SafeGetString(row, "CreatedOn"),
+                        ModifiedOn = SafeGetString(row, "ModifiedOn"),
+                        TestDevice = SafeGetString(row, "TestDevice"),
+                        ReliabilityDevice = SafeGetString(row, "ReliabilityDevice"),
+                        DeviceAlias = finalDeviceAlias,
+                        UnitCost = SafeGetNullableDecimal(row, "UnitCost")
+                    });
                 }
+            }
 
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in SearchDevice: {ex.Message}");
-                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-                throw;
-            }
+            return result;
         }
 
         private int SafeGetInt32(DataRow row, string columnName)
         {
             if (row.Table.Columns.Contains(columnName) && row[columnName] != DBNull.Value)
             {
-                int.TryParse(row[columnName].ToString(), out int value);
-                return value;
+                if (int.TryParse(row[columnName].ToString(), out int value))
+                {
+                    return value;
+                }
             }
             return 0;
         }
@@ -172,7 +142,6 @@ namespace ISEMES.Services
                 {
                     return value;
                 }
-                // Try converting 1/0 or "true"/"false" strings
                 var strValue = row[columnName].ToString()?.ToLower();
                 return strValue == "true" || strValue == "1";
             }
@@ -189,6 +158,114 @@ namespace ISEMES.Services
                 }
             }
             return null;
+        }
+
+        public async Task<List<Country>> GetRestrictedCountries()
+        {
+            return await _repository.GetRestrictedCountries();
+        }
+
+        public async Task<List<CustomerLabel>> GetCustomerLabelList(string customerName)
+        {
+            return await _repository.GetCustomerLabelList(customerName);
+        }
+
+        public async Task<LabelDetailsResponse> GetLabelDetails(int customerId, int deviceId, string labelName, string lotNum)
+        {
+            return await _repository.GetLabelDetails(customerId, deviceId, labelName, lotNum);
+        }
+
+        public async Task<int> AddOrUpdateLabelDetails(int customerId, int deviceId, string labelName, string input)
+        {
+            return await _repository.AddOrUpdateLabelDetails(customerId, deviceId, labelName, input);
+        }
+
+        public async Task<DeviceInfoResponse> GetDeviceInfo(int deviceId)
+        {
+            var dataSet = await _repository.GetDeviceInfo(deviceId);
+            var response = new DeviceInfoResponse();
+            
+            if (dataSet.Tables.Count > 0 && dataSet.Tables[0].Rows.Count > 0)
+            {
+                var row = dataSet.Tables[0].Rows[0];
+                var table = dataSet.Tables[0];
+                response.CanEdit = SafeGetBoolean(row, "CanEdit");
+                
+                if (table.Columns.Contains("LastModifiedOn"))
+                {
+                    response.LastModifiedOn = SafeGetString(row, "LastModifiedOn");
+                }
+                
+                if (table.Columns.Contains("CanEditlotType"))
+                {
+                    response.CanEditlotType = SafeGetBoolean(row, "CanEditlotType");
+                }
+                
+                for (int i = 1; i <= 5; i++)
+                {
+                    var columnName = $"CanEditlabel{i}";
+                    if (table.Columns.Contains(columnName))
+                    {
+                        switch (i)
+                        {
+                            case 1: response.CanEditLabel1 = SafeGetBoolean(row, columnName); break;
+                            case 2: response.CanEditLabel2 = SafeGetBoolean(row, columnName); break;
+                            case 3: response.CanEditLabel3 = SafeGetBoolean(row, columnName); break;
+                            case 4: response.CanEditLabel4 = SafeGetBoolean(row, columnName); break;
+                            case 5: response.CanEditLabel5 = SafeGetBoolean(row, columnName); break;
+                        }
+                    }
+                }
+            }
+            
+            if (dataSet.Tables.Count > 1 && dataSet.Tables[1].Rows.Count > 0)
+            {
+                response.DQP = ConvertDataTableToList(dataSet.Tables[1]);
+            }
+            
+            if (dataSet.Tables.Count > 2 && dataSet.Tables[2].Rows.Count > 0)
+            {
+                response.MF = ConvertDataTableToList(dataSet.Tables[2]);
+            }
+            
+            if (dataSet.Tables.Count > 3 && dataSet.Tables[3].Rows.Count > 0)
+            {
+                response.TRV = ConvertDataTableToList(dataSet.Tables[3]);
+            }
+            
+            if (dataSet.Tables.Count > 4 && dataSet.Tables[4].Rows.Count > 0)
+            {
+                response.Boards = ConvertDataTableToList(dataSet.Tables[4]);
+            }
+            
+            if (dataSet.Tables.Count > 6 && dataSet.Tables[6].Rows.Count > 0)
+            {
+                response.DeviceLabelInfo = ConvertDataTableToList(dataSet.Tables[6]);
+            }
+            
+            return response;
+        }
+
+        private List<Dictionary<string, object>> ConvertDataTableToList(DataTable dataTable)
+        {
+            var list = new List<Dictionary<string, object>>();
+            foreach (DataRow row in dataTable.Rows)
+            {
+                var dict = new Dictionary<string, object>();
+                foreach (DataColumn column in dataTable.Columns)
+                {
+                    if (row[column] != DBNull.Value)
+                    {
+                        dict[column.ColumnName] = row[column];
+                    }
+                    else
+                    {
+                        dict[column.ColumnName] = null;
+                    }
+                }
+                list.Add(dict);
+            }
+            return list;
         }
     }
 }

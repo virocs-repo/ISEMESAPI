@@ -27,10 +27,13 @@ namespace ISEMES.API.Controllers
         [ProducesResponseType(typeof(string), 403)]
         public async Task<IActionResult> AddUpdateDeviceFamily([FromBody] DeviceFamilyRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             try
             {
-                // Try to get user ID from token claims (similar to how inventory endpoints work)
-                // If not found, use the CreatedBy value from request (frontend sends 0)
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? 
                                  User.FindFirst("EmployeeId")?.Value;
                 
@@ -38,8 +41,7 @@ namespace ISEMES.API.Controllers
                 {
                     request.CreatedBy = userId;
                 }
-                // If user ID not found in token, use CreatedBy from request (defaults to 0)
-                // This matches how inventory/receiving endpoints work - they don't extract user ID
+                
                 var result = await _deviceMasterService.AddUpdateDeviceFamily(request);
                 
                 if (result < 0)
@@ -62,10 +64,13 @@ namespace ISEMES.API.Controllers
         [ProducesResponseType(typeof(string), 403)]
         public async Task<IActionResult> AddUpdateDevice([FromBody] DeviceMasterRequest request)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             try
             {
-                // Try to get user ID from token claims (similar to how inventory endpoints work)
-                // If not found, use the CreatedBy value from request (frontend sends 0)
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? 
                                  User.FindFirst("EmployeeId")?.Value;
                 
@@ -73,8 +78,7 @@ namespace ISEMES.API.Controllers
                 {
                     request.CreatedBy = userId;
                 }
-                // If user ID not found in token, use CreatedBy from request (defaults to 0)
-                // This matches how inventory/receiving endpoints work - they don't extract user ID
+                
                 var result = await _deviceMasterService.AddUpdateDevice(request);
                 
                 if (result < 0)
@@ -123,5 +127,107 @@ namespace ISEMES.API.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
+        [HttpGet("restrictedcountries")]
+        [ProducesResponseType(typeof(List<Country>), 200)]
+        [ProducesResponseType(typeof(string), 401)]
+        [ProducesResponseType(typeof(string), 403)]
+        public async Task<IActionResult> GetRestrictedCountries()
+        {
+            try
+            {
+                var countries = await _deviceMasterService.GetRestrictedCountries();
+                return Ok(countries);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [HttpGet("customerlabels")]
+        [ProducesResponseType(typeof(List<CustomerLabel>), 200)]
+        [ProducesResponseType(typeof(string), 401)]
+        [ProducesResponseType(typeof(string), 403)]
+        public async Task<IActionResult> GetCustomerLabelList([FromQuery] string? customerName)
+        {
+            try
+            {
+                var result = await _deviceMasterService.GetCustomerLabelList(customerName ?? string.Empty);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [HttpGet("labeldetails")]
+        [ProducesResponseType(typeof(LabelDetailsResponse), 200)]
+        [ProducesResponseType(typeof(string), 401)]
+        [ProducesResponseType(typeof(string), 403)]
+        public async Task<IActionResult> GetLabelDetails([FromQuery] int? customerId, [FromQuery] int? deviceId, [FromQuery] string? labelName, [FromQuery] string? lotNum)
+        {
+            try
+            {
+                var result = await _deviceMasterService.GetLabelDetails(
+                    customerId ?? 0, 
+                    deviceId ?? 0, 
+                    labelName ?? string.Empty, 
+                    lotNum ?? string.Empty);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [HttpPost("labeldetails")]
+        [ProducesResponseType(typeof(int), 200)]
+        [ProducesResponseType(typeof(string), 401)]
+        [ProducesResponseType(typeof(string), 403)]
+        public async Task<IActionResult> AddOrUpdateLabelDetails([FromBody] LabelDetailsRequest request)
+        {
+            try
+            {
+                var result = await _deviceMasterService.AddOrUpdateLabelDetails(request.CustomerId, request.DeviceId, request.LabelName, request.Input);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        [HttpGet("device/getDeviceInfo")]
+        [ProducesResponseType(typeof(DeviceInfoResponse), 200)]
+        [ProducesResponseType(typeof(string), 401)]
+        [ProducesResponseType(typeof(string), 403)]
+        public async Task<IActionResult> GetDeviceInfo([FromQuery] int deviceId)
+        {
+            if (deviceId <= 0)
+            {
+                return BadRequest("Device ID must be greater than 0");
+            }
+
+            try
+            {
+                var result = await _deviceMasterService.GetDeviceInfo(deviceId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+    }
+
+    public class LabelDetailsRequest
+    {
+        public int CustomerId { get; set; }
+        public int DeviceId { get; set; }
+        public string LabelName { get; set; } = string.Empty;
+        public string Input { get; set; } = string.Empty;
     }
 }

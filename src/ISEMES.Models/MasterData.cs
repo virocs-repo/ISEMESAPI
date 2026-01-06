@@ -82,6 +82,42 @@ namespace ISEMES.Models
         public int CountryID { get; set; }
         public string CountryName { get; set; }
     }
+
+    public class CustomerLabel
+    {
+        public int LID { get; set; }
+        public string LName { get; set; } = string.Empty;
+    }
+
+    public class LabelMappingDetail
+    {
+        public int LabelId { get; set; }
+        public string LFName { get; set; } = string.Empty;
+        public string LDType { get; set; } = string.Empty;
+        public string LDText { get; set; } = string.Empty;
+        public string LDValue { get; set; } = string.Empty;
+        public string ImageVisible { get; set; } = string.Empty;
+        public bool IsEnable { get; set; } = true;
+        public bool isEdit { get; set; } = false;
+        public string cmbvisibility { get; set; } = "Visible";
+        public string txtvisibility { get; set; } = "Visible";
+        public string LdTypecmbvisibility { get; set; } = "Visible";
+        public string Imgcmbvisibility { get; set; } = "Collapsed";
+        public int LDTypeId { get; set; }
+    }
+
+    public class Prd_LDValues
+    {
+        public int LDValueId { get; set; }
+        public string LDValue { get; set; } = string.Empty;
+    }
+
+    public class LabelDetailsResponse
+    {
+        public List<LabelMappingDetail> LabelDetails { get; set; } = new List<LabelMappingDetail>();
+        public List<Prd_LDValues> LDValues { get; set; } = new List<Prd_LDValues>();
+    }
+
     public class EmployeeMaster
     {
         public int employeeID { get; set; }
