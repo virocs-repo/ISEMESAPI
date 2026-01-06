@@ -83,7 +83,28 @@ namespace ISEMES.Services
                         TestDevice = SafeGetString(row, "TestDevice"),
                         ReliabilityDevice = SafeGetString(row, "ReliabilityDevice"),
                         DeviceAlias = finalDeviceAlias,
-                        UnitCost = SafeGetNullableDecimal(row, "UnitCost")
+                        UnitCost = SafeGetNullableDecimal(row, "UnitCost"),
+                        DeviceTypeId = SafeGetNullableInt(row, "DeviceTypeId") ?? SafeGetNullableInt(row, "DeviceType") ?? SafeGetNullableInt(row, "LotTypeId"),
+                        COOId = SafeGetNullableInt(row, "COOId") ?? SafeGetNullableInt(row, "CountryOfOriginId") ?? SafeGetNullableInt(row, "COO"),
+                        PartTypeId = SafeGetNullableInt(row, "PartTypeId") ?? SafeGetNullableInt(row, "PartType"),
+                        MaterialDescriptionId = SafeGetNullableInt(row, "MaterialDescriptionId"),
+                        USHTSCodeId = SafeGetNullableInt(row, "USHTSCodeId"),
+                        ECCNId = SafeGetNullableInt(row, "ECCNId"),
+                        LicenseExceptionId = SafeGetNullableInt(row, "LicenseExceptionId"),
+                        RestrictedCountriesIds = SafeGetString(row, "RestrictedCountriesIds"),
+                        ScheduleB = SafeGetBoolean(row, "ScheduleB"),
+                        MSLId = SafeGetNullableInt(row, "MSLId") ?? SafeGetNullableInt(row, "MSL"),
+                        PeakPackageBodyTemperatureId = SafeGetNullableInt(row, "PeakPackageBodyTemperatureId") ?? SafeGetNullableInt(row, "PeakPacckageBody"),
+                        ShelfLifeMonthId = SafeGetNullableInt(row, "ShelfLifeId") ?? SafeGetNullableInt(row, "ShelfLife"),
+                        FloorLifeId = SafeGetNullableInt(row, "FloorLifeId") ?? SafeGetNullableInt(row, "FloorLife"),
+                        PBFreeId = SafeGetNullableInt(row, "PBFreeId") ?? SafeGetNullableInt(row, "PBFree"),
+                        PBFreeStickerId = SafeGetNullableInt(row, "PBFreeStickerId") ?? SafeGetNullableInt(row, "PBFreeSticker"),
+                        ROHSId = SafeGetNullableInt(row, "ROHSId") ?? SafeGetNullableInt(row, "ROHS"),
+                        TrayTubeStrappingId = SafeGetNullableInt(row, "TrayStrappingId") ?? SafeGetNullableInt(row, "TrayStrapping"),
+                        TrayStackingId = SafeGetNullableInt(row, "TrayStackingId") ?? SafeGetNullableInt(row, "TrayStacking"),
+                        IsLabelMapped = SafeGetBoolean(row, "IsLabelMapped"),
+                        IsDeviceBasedTray = SafeGetBoolean(row, "IsDeviceBasedTray"),
+                        SKU = SafeGetString(row, "SKU")
                     });
                 }
             }
@@ -160,6 +181,39 @@ namespace ISEMES.Services
             return null;
         }
 
+        private bool? SafeGetNullableBoolean(DataRow row, string columnName)
+        {
+            if (row.Table.Columns.Contains(columnName) && row[columnName] != DBNull.Value)
+            {
+                if (bool.TryParse(row[columnName].ToString(), out bool value))
+                {
+                    return value;
+                }
+                var strValue = row[columnName].ToString()?.ToLower();
+                if (strValue == "true" || strValue == "1")
+                {
+                    return true;
+                }
+                if (strValue == "false" || strValue == "0")
+                {
+                    return false;
+                }
+            }
+            return null;
+        }
+
+        private DateTime? SafeGetNullableDateTime(DataRow row, string columnName)
+        {
+            if (row.Table.Columns.Contains(columnName) && row[columnName] != DBNull.Value)
+            {
+                if (DateTime.TryParse(row[columnName].ToString(), out DateTime value))
+                {
+                    return value;
+                }
+            }
+            return null;
+        }
+
         public async Task<List<Country>> GetRestrictedCountries()
         {
             return await _repository.GetRestrictedCountries();
@@ -185,39 +239,80 @@ namespace ISEMES.Services
             var dataSet = await _repository.GetDeviceInfo(deviceId);
             var response = new DeviceInfoResponse();
             
+            // Map device fields from Table[0] - #GetDevices
             if (dataSet.Tables.Count > 0 && dataSet.Tables[0].Rows.Count > 0)
             {
                 var row = dataSet.Tables[0].Rows[0];
                 var table = dataSet.Tables[0];
+                
+                // CanEdit flags
                 response.CanEdit = SafeGetBoolean(row, "CanEdit");
+                response.CanEditlotType = SafeGetBoolean(row, "CanEditlotType");
+                response.LastModifiedOn = SafeGetStringNullable(row, "LastModifiedOn");
                 
-                if (table.Columns.Contains("LastModifiedOn"))
-                {
-                    response.LastModifiedOn = SafeGetString(row, "LastModifiedOn");
-                }
+                // Device basic info
+                response.DeviceId = SafeGetNullableInt(row, "DeviceId");
+                response.DeviceFamilyID = SafeGetNullableInt(row, "DeviceFamilyID");
+                response.DeviceFamily = SafeGetStringNullable(row, "DeviceFamily");
+                response.Device = SafeGetStringNullable(row, "Device");
+                response.TestDevice = SafeGetStringNullable(row, "TestDevice");
+                response.ReliabilityDevice = SafeGetStringNullable(row, "ReliabilityDevice");
                 
-                if (table.Columns.Contains("CanEditlotType"))
-                {
-                    response.CanEditlotType = SafeGetBoolean(row, "CanEditlotType");
-                }
+                // Device IDs
+                response.PartTypeId = SafeGetNullableInt(row, "PartTypeId");
+                response.MaterialDescriptionId = SafeGetNullableInt(row, "MaterialDescriptionId");
+                response.USHTSCodeId = SafeGetNullableInt(row, "USHTSCodeId");
+                response.ECCNId = SafeGetNullableInt(row, "ECCNId");
+                response.ECCN = SafeGetStringNullable(row, "ECCN");
+                response.LicenseExceptionId = SafeGetNullableInt(row, "LicenseExceptionId");
+                response.RestrictedCountriesIds = SafeGetStringNullable(row, "RestrictedCountriesIds");
+                response.ScheduleB = SafeGetNullableBoolean(row, "ScheduleB");
+                response.Active = SafeGetNullableBoolean(row, "Active");
+                response.UnitCost = SafeGetNullableDecimal(row, "UnitCost");
+                response.IsLabelMapped = SafeGetNullableBoolean(row, "IsLabelMapped");
+                response.SKU = SafeGetStringNullable(row, "SKU");
+                response.IsDeviceBasedTray = SafeGetNullableBoolean(row, "IsDeviceBasedTray");
                 
-                for (int i = 1; i <= 5; i++)
-                {
-                    var columnName = $"CanEditlabel{i}";
-                    if (table.Columns.Contains(columnName))
-                    {
-                        switch (i)
-                        {
-                            case 1: response.CanEditLabel1 = SafeGetBoolean(row, columnName); break;
-                            case 2: response.CanEditLabel2 = SafeGetBoolean(row, columnName); break;
-                            case 3: response.CanEditLabel3 = SafeGetBoolean(row, columnName); break;
-                            case 4: response.CanEditLabel4 = SafeGetBoolean(row, columnName); break;
-                            case 5: response.CanEditLabel5 = SafeGetBoolean(row, columnName); break;
-                        }
-                    }
-                }
+                // Pack&Label Info IDs
+                response.MSL = SafeGetNullableInt(row, "MSL");
+                response.PeakPacckageBody = SafeGetNullableInt(row, "PeakPacckageBody");
+                response.ShelfLife = SafeGetNullableInt(row, "ShelfLife");
+                response.FloorLife = SafeGetNullableInt(row, "FloorLife");
+                response.PBFree = SafeGetNullableInt(row, "PBFree");
+                response.PBFreeSticker = SafeGetNullableInt(row, "PBFreeSticker");
+                response.ROHS = SafeGetNullableInt(row, "ROHS");
+                response.TrayStrapping = SafeGetNullableInt(row, "TrayStrapping");
+                response.TrayStacking = SafeGetNullableInt(row, "TrayStacking");
+                response.DeviceTypeId = SafeGetNullableInt(row, "DeviceTypeId");
+                response.COOId = SafeGetNullableInt(row, "COOId");
+                
+                // Audit fields
+                response.CreatedOn = SafeGetNullableDateTime(row, "CreatedOn");
+                response.CreatedBy = SafeGetStringNullable(row, "CreatedBy");
+                response.LastModifiedBy = SafeGetStringNullable(row, "LastModifiedBy");
             }
             
+            // Map label details from Table[5] - @LabelDetails
+            if (dataSet.Tables.Count > 5 && dataSet.Tables[5].Rows.Count > 0)
+            {
+                var labelRow = dataSet.Tables[5].Rows[0];
+                response.LabelCustomer = SafeGetStringNullable(labelRow, "Customer");
+                response.LabelDevice = SafeGetStringNullable(labelRow, "Device");
+                response.Label1 = SafeGetStringNullable(labelRow, "label1");
+                response.Label2 = SafeGetStringNullable(labelRow, "label2");
+                response.Label3 = SafeGetStringNullable(labelRow, "label3");
+                response.Label4 = SafeGetStringNullable(labelRow, "label4");
+                response.Label5 = SafeGetStringNullable(labelRow, "label5");
+                
+                // Update CanEditLabel flags from label details if available
+                response.CanEditLabel1 = SafeGetBoolean(labelRow, "CanEditlabel1");
+                response.CanEditLabel2 = SafeGetBoolean(labelRow, "CanEditlabel2");
+                response.CanEditLabel3 = SafeGetBoolean(labelRow, "CanEditlabel3");
+                response.CanEditLabel4 = SafeGetBoolean(labelRow, "CanEditlabel4");
+                response.CanEditLabel5 = SafeGetBoolean(labelRow, "CanEditlabel5");
+            }
+            
+            // Map usage data tables
             if (dataSet.Tables.Count > 1 && dataSet.Tables[1].Rows.Count > 0)
             {
                 response.DQP = ConvertDataTableToList(dataSet.Tables[1]);

@@ -3,6 +3,8 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Data;
+using System.Text;
+using System.Xml.Serialization;
 
 namespace ISEMES.Repositories
 {
@@ -56,11 +58,17 @@ namespace ISEMES.Repositories
                 using (var command = new SqlCommand("PRD_Device_P_AddOrUpdate", connection))
                 {
                     command.CommandType = CommandType.StoredProcedure;
-                    command.Parameters.AddWithValue("@DeviceFamilyId", request.DeviceFamilyId);
-                    command.Parameters.AddWithValue("@DeviceId", request.DeviceId);
-                    command.Parameters.AddWithValue("@Device", request.DeviceName);
-                    command.Parameters.AddWithValue("@UserId", request.CreatedBy);
-                    command.Parameters.AddWithValue("@Active", request.IsActive);
+                    
+                    // Clean up nullable fields before serialization to prevent DBNull casting errors
+                    CleanupNullableFields(request);
+                    
+                    // Serialize the request object to XML (matching TFS implementation)
+                    string deviceXml = SerializeToXml(request);
+                    
+                    // Log XML for debugging (can be removed in production)
+                    // System.Diagnostics.Debug.WriteLine($"Device XML: {deviceXml}");
+                    
+                    command.Parameters.AddWithValue("@DeviceXML", deviceXml);
                     
                     var returnCodeParam = new SqlParameter("@ReturnCode", SqlDbType.Int)
                     {
@@ -68,9 +76,74 @@ namespace ISEMES.Repositories
                     };
                     command.Parameters.Add(returnCodeParam);
 
+                    var returnStrParam = new SqlParameter("@ReturnStr", SqlDbType.VarChar, 8000)
+                    {
+                        Direction = ParameterDirection.Output
+                    };
+                    command.Parameters.Add(returnStrParam);
+
                     await command.ExecuteNonQueryAsync();
                     return (int)(returnCodeParam.Value ?? 0);
                 }
+            }
+        }
+
+        private void CleanupNullableFields(DeviceMasterRequest request)
+        {
+            // Ensure nullable int fields that should be excluded are set to null
+            // This works in conjunction with ShouldSerialize methods to prevent DBNull casting errors
+            // Fields with invalid values (< 0) are set to null so they won't be serialized
+            if (request.CountryOfOriginId.HasValue && request.CountryOfOriginId.Value <= 0)
+                request.CountryOfOriginId = null;
+            if (request.MaterialDescriptionId.HasValue && request.MaterialDescriptionId.Value <= 0)
+                request.MaterialDescriptionId = null;
+            if (request.USHTSCodeId.HasValue && request.USHTSCodeId.Value <= 0)
+                request.USHTSCodeId = null;
+            if (request.ECCNId.HasValue && request.ECCNId.Value <= 0)
+                request.ECCNId = null;
+            if (request.LicenseExceptionId.HasValue && request.LicenseExceptionId.Value <= 0)
+                request.LicenseExceptionId = null;
+            // RestrictedCountriesToShipId is a string, not an int, so handle it differently
+            if (!string.IsNullOrEmpty(request.RestrictedCountriesToShipId) && 
+                (request.RestrictedCountriesToShipId == "-1" || request.RestrictedCountriesToShipId == "0"))
+                request.RestrictedCountriesToShipId = null;
+            if (request.MSLId.HasValue && request.MSLId.Value <= 0)
+                request.MSLId = null;
+            if (request.PeakPackageBodyTemperatureId.HasValue && request.PeakPackageBodyTemperatureId.Value <= 0)
+                request.PeakPackageBodyTemperatureId = null;
+            if (request.ShelfLifeMonthId.HasValue && request.ShelfLifeMonthId.Value <= 0)
+                request.ShelfLifeMonthId = null;
+            if (request.FloorLifeId.HasValue && request.FloorLifeId.Value <= 0)
+                request.FloorLifeId = null;
+            if (request.PBFreeId.HasValue && request.PBFreeId.Value <= 0)
+                request.PBFreeId = null;
+            if (request.PBFreeStickerId.HasValue && request.PBFreeStickerId.Value <= 0)
+                request.PBFreeStickerId = null;
+            if (request.ROHSId.HasValue && request.ROHSId.Value <= 0)
+                request.ROHSId = null;
+            if (request.TrayTubeStrappingId.HasValue && request.TrayTubeStrappingId.Value <= 0)
+                request.TrayTubeStrappingId = null;
+            if (request.TrayStackingId.HasValue && request.TrayStackingId.Value <= 0)
+                request.TrayStackingId = null;
+            // LockId: set to null if it's -1 (invalid/default value)
+            if (request.LockId.HasValue && request.LockId.Value == -1)
+                request.LockId = null;
+        }
+
+        private string SerializeToXml(DeviceMasterRequest request)
+        {
+            try
+            {
+                var serializer = new XmlSerializer(typeof(DeviceMasterRequest));
+                using (var stringWriter = new StringWriter())
+                {
+                    serializer.Serialize(stringWriter, request);
+                    return stringWriter.ToString();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Error serializing DeviceMasterRequest to XML: {ex.Message}", ex);
             }
         }
 
