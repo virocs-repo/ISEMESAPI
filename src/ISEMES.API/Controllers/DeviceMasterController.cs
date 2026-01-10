@@ -3,6 +3,7 @@ using ISEMES.Services;
 using ISEMES.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 
 namespace ISEMES.API.Controllers
 {
@@ -340,6 +341,7 @@ namespace ISEMES.API.Controllers
         public int? CountryOfOriginId { get; set; }
         public decimal? UnitCost { get; set; }
         public int? MaterialDescriptionId { get; set; }
+        [JsonPropertyName("usHtsCodeId")]
         public int? USHTSCodeId { get; set; }
         public int? ECCNId { get; set; }
         public int? LicenseExceptionId { get; set; }

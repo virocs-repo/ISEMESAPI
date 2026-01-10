@@ -258,7 +258,9 @@ namespace ISEMES.Repositories
         {
             var response = new LabelDetailsResponse();
             var labelDetails = new List<LabelMappingDetail>();
+            var ldTypes = new List<Prd_LDTypes>();
             var ldValues = new List<Prd_LDValues>();
+            var packAndLabelImages = new List<Prd_PackandLabelImges>();
             
             using (var connection = new SqlConnection(GetConnectionString()))
             {
@@ -325,6 +327,7 @@ namespace ISEMES.Repositories
                             }
                         }
 
+                        // Read Table[0]: Label Mapping Details
                         if (HasColumn("ErrorNumber"))
                         {
                             throw new Exception("Stored procedure returned error result set");
@@ -350,10 +353,39 @@ namespace ISEMES.Repositories
                             });
                         }
 
-                        await reader.NextResultAsync();
-
+                        // Read Table[1]: LD Types (for Type dropdown) - matching TFS LDTypes method
                         if (await reader.NextResultAsync())
                         {
+                            // Add "--Select--" as first option (matching TFS line 155)
+                            ldTypes.Add(new Prd_LDTypes { LDTypeId = 0, LDType = "--Select--" });
+                            
+                            while (await reader.ReadAsync())
+                            {
+                                try
+                                {
+                                    int masterListItemId = GetInt32Safe("MasterListItemId", 0);
+                                    string itemText = GetStringSafe("ItemText", string.Empty);
+                                    
+                                    if (!string.IsNullOrEmpty(itemText))
+                                    {
+                                        ldTypes.Add(new Prd_LDTypes
+                                        {
+                                            LDTypeId = masterListItemId,
+                                            LDType = itemText
+                                        });
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    throw new InvalidOperationException($"Error reading LDType row: {ex.Message}", ex);
+                                }
+                            }
+                        }
+
+                        // Read Table[2]: LD Values (for Value dropdown when Type is "Database") - matching TFS LDValues method
+                        if (await reader.NextResultAsync())
+                        {
+                            // Add "--Select--" as first option (matching TFS line 173)
                             ldValues.Add(new Prd_LDValues { LDValueId = 0, LDValue = "--Select--" });
                             
                             while (await reader.ReadAsync())
@@ -379,13 +411,44 @@ namespace ISEMES.Repositories
                             }
                         }
 
-                        await reader.NextResultAsync();
+                        // Read Table[3]: Pack and Label Images (for ImageVisible dropdown for rohs/e1 fields) - matching TFS LImageDetails method
+                        if (await reader.NextResultAsync())
+                        {
+                            // Add "--Select--" as first option (matching TFS line 191)
+                            packAndLabelImages.Add(new Prd_PackandLabelImges { ImageId = 0, ImageVisible = "--Select--" });
+                            
+                            while (await reader.ReadAsync())
+                            {
+                                try
+                                {
+                                    int masterListItemId = GetInt32Safe("MasterListItemId", 0);
+                                    string itemText = GetStringSafe("ItemText", string.Empty);
+                                    
+                                    if (!string.IsNullOrEmpty(itemText))
+                                    {
+                                        packAndLabelImages.Add(new Prd_PackandLabelImges
+                                        {
+                                            ImageId = masterListItemId,
+                                            ImageVisible = itemText
+                                        });
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    throw new InvalidOperationException($"Error reading PackAndLabelImage row: {ex.Message}", ex);
+                                }
+                            }
+                        }
                     }
                 }
             }
             
+            // Populate response matching TFS structure (lines 126-134)
             response.LabelDetails = labelDetails;
+            response.LDTypes = ldTypes;
             response.LDValues = ldValues;
+            response.PackAndLabelImages = packAndLabelImages;
+            
             return response;
         }
 
