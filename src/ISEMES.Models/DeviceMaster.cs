@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using System.Xml.Serialization;
 
 namespace ISEMES.Models
@@ -182,6 +183,7 @@ namespace ISEMES.Models
         public int? COOId { get; set; } // Country of Origin ID
         public int? PartTypeId { get; set; } // Part Type ID
         public int? MaterialDescriptionId { get; set; }
+        [JsonPropertyName("usHtsCodeId")]
         public int? USHTSCodeId { get; set; }
         public int? ECCNId { get; set; }
         public int? LicenseExceptionId { get; set; }
@@ -228,6 +230,7 @@ namespace ISEMES.Models
         public string? ReliabilityDevice { get; set; }
         public int? PartTypeId { get; set; }
         public int? MaterialDescriptionId { get; set; }
+        [JsonPropertyName("usHtsCodeId")]
         public int? USHTSCodeId { get; set; }
         public bool? ScheduleB { get; set; }
         public int? ECCNId { get; set; }

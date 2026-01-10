@@ -106,16 +106,30 @@ namespace ISEMES.Models
         public int LDTypeId { get; set; }
     }
 
+    public class Prd_LDTypes
+    {
+        public int LDTypeId { get; set; }
+        public string LDType { get; set; } = string.Empty;
+    }
+
     public class Prd_LDValues
     {
         public int LDValueId { get; set; }
         public string LDValue { get; set; } = string.Empty;
     }
 
+    public class Prd_PackandLabelImges
+    {
+        public int ImageId { get; set; }
+        public string ImageVisible { get; set; } = string.Empty;
+    }
+
     public class LabelDetailsResponse
     {
         public List<LabelMappingDetail> LabelDetails { get; set; } = new List<LabelMappingDetail>();
+        public List<Prd_LDTypes> LDTypes { get; set; } = new List<Prd_LDTypes>();
         public List<Prd_LDValues> LDValues { get; set; } = new List<Prd_LDValues>();
+        public List<Prd_PackandLabelImges> PackAndLabelImages { get; set; } = new List<Prd_PackandLabelImges>();
     }
 
     public class EmployeeMaster
