@@ -125,7 +125,7 @@ namespace ISEMES.Models
 
     public class IcrSearch
     {
-        public int LotId { get; set; }
+        public int? LotId { get; set; }
         public string ControlRoomLocation { get; set; }
         public string ISELotNumber { get; set; }
         public string CustomerName { get; set; }
@@ -140,7 +140,8 @@ namespace ISEMES.Models
         public string CurrentLotLocation { get; set; }
         public DateTime RequestedOn { get; set; }
         public string PreviousStep { get; set; }
-        public int TRVStepId { get; set; }
+        public int? TRVStepId { get; set; }
+        public int? RequestId { get; set; }
     }
 
     public class MergedLots

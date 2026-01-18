@@ -12,13 +12,11 @@ namespace ISEMES.Repositories
     public class ReceivingRepository : IReceivingRepository
     {
         private readonly AppDbContext _context;
-        private readonly TFSDbContext _tfsContext;
         private readonly IConfiguration _configuration;
 
-        public ReceivingRepository(AppDbContext context, TFSDbContext tfsContext, IConfiguration configuration)
+        public ReceivingRepository(AppDbContext context,  IConfiguration configuration)
         {
             _context = context;
-            _tfsContext = tfsContext;
             _configuration = configuration;
         }
 
@@ -114,7 +112,7 @@ namespace ISEMES.Repositories
 
         public async Task<string> GetGeneratedLineItemNumber()
         {
-            using var connection = new SqlConnection(_tfsContext.Database.GetConnectionString());
+            using var connection = new SqlConnection(_context.Database.GetConnectionString());
             using var command = new SqlCommand("dbo.PRD_P_GenNo", connection) { CommandType = CommandType.StoredProcedure };
             command.Parameters.AddWithValue("@Prefix", "L");
             command.Parameters.AddWithValue("@RecType", "Lot");
@@ -470,7 +468,7 @@ namespace ISEMES.Repositories
         public async Task<List<DeviceFamily>> DeviceFamiliesAsync(int customerId)
         {
             var deviceFamilies = new List<DeviceFamily>();
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryTFS_Prod2Connection")))
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryConnection")))
             {
                 await connection.OpenAsync();
                 using (var command = new SqlCommand("PRD_Device_P_SearchDeviceFamily", connection))
@@ -516,7 +514,7 @@ namespace ISEMES.Repositories
         public async Task<List<ServiceCategory>> GetInventoryReceiptServiceCategoryAsync(string ListName)
         {
             var statuses = new List<ServiceCategory>();
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryTFS_Prod2Connection")))
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryConnection")))
             {
                 await connection.OpenAsync();
                 using (var command = new SqlCommand("PRD_P_GetMasterListItems", connection))
@@ -538,7 +536,7 @@ namespace ISEMES.Repositories
         public async Task<List<LotOwners>> GetInventoryReceiptLotOwnersAsync()
         {
             var lotOwners = new List<LotOwners>();
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryTFS_Prod2Connection")))
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryConnection")))
             {
                 await connection.OpenAsync();
                 using (var command = new SqlCommand("PRD_Lot_P_GetLotOwnersList", connection))
@@ -556,7 +554,7 @@ namespace ISEMES.Repositories
             return lotOwners;
         }
 
-        public async Task<List<TrayVendor>> GetInventoryReceiptTrayVendorAsync(int customerId)
+        public async Task<List<TrayVendor>> GetInventoryReceiptTrayVendorAsync(int customerId)        
         {
             var trayVendor = new List<TrayVendor>();
 
@@ -672,7 +670,7 @@ namespace ISEMES.Repositories
         public async Task<List<PurchaseOrder>> GetPurchaseOrdersAsync(int customerId, int? divisionId, bool? isFreezed)
         {
             var purchaseOrders = new List<PurchaseOrder>();
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryTFS_Prod2Connection")))
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryConnection")))
             {
                 await connection.OpenAsync();
                 using (var command = new SqlCommand("tfsp_GetPurchaseOrdersByCustomerId", connection))
@@ -727,7 +725,7 @@ namespace ISEMES.Repositories
         {
             var list = new List<Quotes>();
 
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryTFS_Prod2Connection")))
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryConnection")))
             {
                 await connection.OpenAsync();
                 using (var command = new SqlCommand("sosp_GetQuotes", connection))
@@ -1039,7 +1037,7 @@ namespace ISEMES.Repositories
         public async Task<List<Interim>> GetSearchInterimCustomerIdAsync(int receiptId, int customerId)
         {
             var list = new List<Interim>();
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryTFS_Prod2Connection")))
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("InventoryConnection")))
             {
                 await connection.OpenAsync();
                 using (var command = new SqlCommand("INV_Rec_P_SearchInterimShippingForMail", connection))
