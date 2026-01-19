@@ -3,7 +3,7 @@ using ISEMES.Services;
 using ISEMES.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace ISEMES.API.Controllers
 {
@@ -14,11 +14,13 @@ namespace ISEMES.API.Controllers
     {
         private readonly TokenProvider _tokenProvider;
         private readonly IDeviceMasterService _deviceMasterService;
+        private readonly ILogger<DeviceMasterController> _logger;
 
-        public DeviceMasterController(TokenProvider tokenProvider, IDeviceMasterService deviceMasterService)
+        public DeviceMasterController(TokenProvider tokenProvider, IDeviceMasterService deviceMasterService, ILogger<DeviceMasterController> logger)
         {
             _tokenProvider = tokenProvider;
             _deviceMasterService = deviceMasterService;
+            _logger = logger;
         }
 
         [HttpPost("devicefamily")]
@@ -104,6 +106,27 @@ namespace ISEMES.API.Controllers
                     isDeviceBasedTray = dto.TrayTubeMapping.Equals("Device", StringComparison.OrdinalIgnoreCase);
                 }
 
+                // Handle USHTSCodeId - support both camelCase (usHtsCodeId) and PascalCase (USHTSCodeId) from frontend
+                // Frontend sends both usHtsCodeId and USHTSCodeId (line 2039-2040 in device.component.ts)
+                // With PropertyNameCaseInsensitive = true, both JSON properties map to USHTSCodeId property
+                // The value should be set from either property (they have the same value)
+                int? usHtsCodeId = dto.USHTSCodeId;
+                
+                // Fallback: If for some reason the property wasn't set, check ExtensionData for PascalCase "USHTSCodeId"
+                // This handles edge cases where case-insensitive matching might not work as expected
+                if (!usHtsCodeId.HasValue && dto.ExtensionData != null && dto.ExtensionData.ContainsKey("USHTSCodeId"))
+                {
+                    var pascalCaseValue = dto.ExtensionData["USHTSCodeId"];
+                    if (pascalCaseValue.ValueKind == System.Text.Json.JsonValueKind.Number)
+                    {
+                        usHtsCodeId = pascalCaseValue.GetInt32();
+                    }
+                }
+                
+                // Note: Frontend sends 0 when -1 (--Select--) is selected, or the actual ID when a value is selected
+                // This matches TFS behavior where UtilityClass.ToInteger(-1) returns 0
+                // The value 122 from the request should be correctly mapped to usHtsCodeId here
+                
                 // Convert DTO to model and handle alias names conversion
                 var request = new DeviceMasterRequest
                 {
@@ -122,7 +145,7 @@ namespace ISEMES.API.Controllers
                     CountryOfOriginId = dto.CountryOfOriginId,
                     UnitCost = dto.UnitCost,
                     MaterialDescriptionId = dto.MaterialDescriptionId,
-                    USHTSCodeId = dto.USHTSCodeId,
+                    USHTSCodeId = usHtsCodeId, // This will be 0 when frontend sends -1 (converted to 0), or the actual ID when a valid value is selected
                     ECCNId = dto.ECCNId,
                     LicenseExceptionId = dto.LicenseExceptionId,
                     RestrictedCountriesToShipId = dto.RestrictedCountriesToShipId,
@@ -300,6 +323,13 @@ namespace ISEMES.API.Controllers
             try
             {
                 var result = await _deviceMasterService.GetDeviceInfo(deviceId);
+                
+                // Log the response to debug USHTSCodeId issue
+                var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+                var responseJson = JsonSerializer.Serialize(result, jsonOptions);
+                _logger.LogInformation($"GetDeviceInfo API Response for DeviceId {deviceId}:");
+                _logger.LogInformation(responseJson);
+                
                 return Ok(result);
             }
             catch (Exception ex)
@@ -341,8 +371,12 @@ namespace ISEMES.API.Controllers
         public int? CountryOfOriginId { get; set; }
         public decimal? UnitCost { get; set; }
         public int? MaterialDescriptionId { get; set; }
-        [JsonPropertyName("usHtsCodeId")]
         public int? USHTSCodeId { get; set; }
+        
+        // Capture any additional JSON properties (including PascalCase USHTSCodeId)
+        // This allows us to handle both camelCase and PascalCase JSON properties
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public Dictionary<string, System.Text.Json.JsonElement>? ExtensionData { get; set; }
         public int? ECCNId { get; set; }
         public int? LicenseExceptionId { get; set; }
         public string? RestrictedCountriesToShipId { get; set; }

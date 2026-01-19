@@ -110,7 +110,14 @@ builder.Services.AddScoped<ISplitMergeService, SplitMergeService>();
 builder.Services.AddScoped<IDeviceMasterRepository, DeviceMasterRepository>();
 builder.Services.AddScoped<IDeviceMasterService, DeviceMasterService>();
 
-builder.Services.AddControllers();
+// Configure JSON serialization to use camelCase for property names
+// This ensures frontend camelCase properties (e.g., usHtsCodeId) map correctly to backend PascalCase (USHTSCodeId)
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
 builder.Services.AddEndpointsApiExplorer();
 
 // Add Swagger and configure Bearer token authorization with separate definitions

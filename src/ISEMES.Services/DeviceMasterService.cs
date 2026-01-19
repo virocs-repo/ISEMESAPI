@@ -1,16 +1,20 @@
 using ISEMES.Models;
 using ISEMES.Repositories;
 using System.Data;
+using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace ISEMES.Services
 {
     public class DeviceMasterService : IDeviceMasterService
     {
         private readonly IDeviceMasterRepository _repository;
+        private readonly ILogger<DeviceMasterService> _logger;
 
-        public DeviceMasterService(IDeviceMasterRepository repository)
+        public DeviceMasterService(IDeviceMasterRepository repository, ILogger<DeviceMasterService> logger)
         {
             _repository = repository;
+            _logger = logger;
         }
 
         public async Task<int> AddUpdateDeviceFamily(DeviceFamilyRequest request)
@@ -88,7 +92,9 @@ namespace ISEMES.Services
                         COOId = SafeGetNullableInt(row, "COOId") ?? SafeGetNullableInt(row, "CountryOfOriginId") ?? SafeGetNullableInt(row, "COO"),
                         PartTypeId = SafeGetNullableInt(row, "PartTypeId") ?? SafeGetNullableInt(row, "PartType"),
                         MaterialDescriptionId = SafeGetNullableInt(row, "MaterialDescriptionId"),
-                        USHTSCodeId = SafeGetNullableInt(row, "USHTSCodeId"),
+                        // USHTSCodeId: Stored procedure selects D.USHTSCodeId same as D.ECCNId
+                        // Use same retrieval as ECCNId, convert 0 to null (valid IDs like 122 are preserved)
+                        USHTSCodeId = SafeGetNullableIntOrZeroAsNull(row, "USHTSCodeId"),
                         ECCNId = SafeGetNullableInt(row, "ECCNId"),
                         LicenseExceptionId = SafeGetNullableInt(row, "LicenseExceptionId"),
                         RestrictedCountriesIds = SafeGetString(row, "RestrictedCountriesIds"),
@@ -145,13 +151,105 @@ namespace ISEMES.Services
 
         private int? SafeGetNullableInt(DataRow row, string columnName)
         {
-            if (row.Table.Columns.Contains(columnName) && row[columnName] != DBNull.Value)
+            // First try exact match (case-sensitive)
+            if (row.Table.Columns.Contains(columnName))
             {
-                if (int.TryParse(row[columnName].ToString(), out int value))
+                if (row[columnName] != DBNull.Value)
                 {
-                    return value;
+                    if (int.TryParse(row[columnName].ToString(), out int value))
+                    {
+                        return value;
+                    }
+                }
+                // Column exists but value is DBNull or can't parse - return null
+                return null;
+            }
+            
+            // Fallback: try case-insensitive match (handles stored procedure column name variations)
+            foreach (DataColumn col in row.Table.Columns)
+            {
+                if (string.Equals(col.ColumnName, columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (row[col.ColumnName] != DBNull.Value)
+                    {
+                        if (int.TryParse(row[col.ColumnName].ToString(), out int value))
+                        {
+                            return value;
+                        }
+                    }
+                    // Found matching column but value is DBNull or can't parse - return null
+                    return null;
                 }
             }
+            
+            // Column not found - return null
+            return null;
+        }
+
+        private int? SafeGetNullableIntOrZeroAsNull(DataRow row, string columnName)
+        {
+            // For USHTSCodeId: Convert 0 to null to match TFS behavior where 0 means "not set"
+            // TFS treats 0 as "not set" and displays -1 (--Select--) in the dropdown
+            // Valid IDs (> 0) are returned as-is
+            var value = SafeGetNullableInt(row, columnName);
+            // Only convert 0 to null; preserve valid IDs and null values
+            if (value.HasValue && value.Value == 0)
+                return null;
+            return value;
+        }
+
+        private int? ConvertZeroToNull(int? value)
+        {
+            // Convert 0 to null for display (frontend shows --Select-- when null)
+            // Valid IDs (> 0) are preserved as-is
+            if (value.HasValue && value.Value == 0)
+                return null;
+            return value;
+        }
+
+        private int? SafeGetNullableIntOrZeroAsNullWithFallback(DataRow row, params string[] columnNames)
+        {
+            // Try each column name until we find one that exists in the table (case-insensitive)
+            // Once we find an existing column, use its value (even if it's 0, which gets converted to null)
+            foreach (var columnName in columnNames)
+            {
+                // First try exact match (case-sensitive)
+                if (row.Table.Columns.Contains(columnName))
+                {
+                    var value = SafeGetNullableIntOrZeroAsNull(row, columnName);
+                    // Return the value (could be null if 0, or the actual ID if > 0)
+                    return value;
+                }
+                
+                // Then try case-insensitive match
+                foreach (DataColumn col in row.Table.Columns)
+                {
+                    if (string.Equals(col.ColumnName, columnName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var value = SafeGetNullableIntOrZeroAsNull(row, col.ColumnName);
+                        return value;
+                    }
+                }
+            }
+            
+            // Last resort: search all columns for any that contain "USHTSCode" or "USHTS" (case-insensitive)
+            // This handles cases where the column name might be slightly different (e.g., "US_HTS_Code_Id")
+            foreach (DataColumn col in row.Table.Columns)
+            {
+                var colName = col.ColumnName;
+                if (colName.IndexOf("USHTSCode", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    colName.IndexOf("USHTS", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    // Read the raw value first to see what we get
+                    var rawValue = SafeGetNullableInt(row, colName);
+                    if (rawValue.HasValue)
+                    {
+                        // Apply zero-to-null conversion
+                        return rawValue.Value == 0 ? null : rawValue;
+                    }
+                }
+            }
+            
             return null;
         }
 
@@ -261,9 +359,24 @@ namespace ISEMES.Services
                 // Device IDs
                 response.PartTypeId = SafeGetNullableInt(row, "PartTypeId");
                 response.MaterialDescriptionId = SafeGetNullableInt(row, "MaterialDescriptionId");
-                response.USHTSCodeId = SafeGetNullableInt(row, "USHTSCodeId");
+                
+                // Debug logging: Check what columns exist and their values
+                var availableColumns = string.Join(", ", row.Table.Columns.Cast<DataColumn>().Select(c => c.ColumnName));
+                _logger.LogInformation($"GetDeviceInfo - Available columns: {availableColumns}");
+                
+                // Check raw values before conversion
+                var rawUSHTSCodeId = SafeGetNullableInt(row, "USHTSCodeId");
+                var rawECCNId = SafeGetNullableInt(row, "ECCNId");
+                _logger.LogInformation($"GetDeviceInfo - Raw USHTSCodeId: {rawUSHTSCodeId}, Raw ECCNId: {rawECCNId}");
+                
+                // USHTSCodeId: Stored procedure selects D.USHTSCodeId same as D.ECCNId
+                // Use same retrieval as ECCNId, convert 0 to null (valid IDs like 122 are preserved)
+                response.USHTSCodeId = SafeGetNullableIntOrZeroAsNull(row, "USHTSCodeId");
                 response.ECCNId = SafeGetNullableInt(row, "ECCNId");
+                
+                _logger.LogInformation($"GetDeviceInfo - Final USHTSCodeId: {response.USHTSCodeId}, Final ECCNId: {response.ECCNId}");
                 response.ECCN = SafeGetStringNullable(row, "ECCN");
+                response.USHTSCodeId = SafeGetNullableIntOrZeroAsNull(row, "USHTSCodeId");
                 response.LicenseExceptionId = SafeGetNullableInt(row, "LicenseExceptionId");
                 response.RestrictedCountriesIds = SafeGetStringNullable(row, "RestrictedCountriesIds");
                 response.ScheduleB = SafeGetNullableBoolean(row, "ScheduleB");

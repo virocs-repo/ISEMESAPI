@@ -117,7 +117,9 @@ namespace ISEMES.Models
         public bool ShouldSerializeCountryOfOriginId() => CountryOfOriginId.HasValue && CountryOfOriginId.Value > 0;
         public bool ShouldSerializeUnitCost() => UnitCost.HasValue;
         public bool ShouldSerializeMaterialDescriptionId() => MaterialDescriptionId.HasValue && MaterialDescriptionId.Value > 0;
-        public bool ShouldSerializeUSHTSCodeId() => USHTSCodeId.HasValue && USHTSCodeId.Value > 0;
+        // Always serialize USHTSCodeId if it has a value (including 0) to match TFS behavior
+        // TFS uses non-nullable int, so 0 is always included in XML
+        public bool ShouldSerializeUSHTSCodeId() => USHTSCodeId.HasValue;
         public bool ShouldSerializeECCNId() => ECCNId.HasValue && ECCNId.Value > 0;
         public bool ShouldSerializeLicenseExceptionId() => LicenseExceptionId.HasValue && LicenseExceptionId.Value > 0;
         public bool ShouldSerializeRestrictedCountriesToShipId() => !string.IsNullOrEmpty(RestrictedCountriesToShipId) && RestrictedCountriesToShipId != "-1" && RestrictedCountriesToShipId != "0";
