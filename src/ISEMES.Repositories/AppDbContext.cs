@@ -31,6 +31,11 @@ namespace ISEMES.Repositories
         public virtual DbSet<ShipmentInventory> GetShipmentInventory { get; set; }
         public virtual DbSet<Attachment> ListReceiptAttachment { get; set; }
         public virtual DbSet<AnotherShipment> ListOtherInventoryShipment { get; set; }
+
+        public async Task<List<Address>> GetAddressAsync()
+        {
+            return await ListAddress.FromSqlRaw("EXEC proc_inv_ListAddress").ToListAsync();
+        }
     }
 }
 

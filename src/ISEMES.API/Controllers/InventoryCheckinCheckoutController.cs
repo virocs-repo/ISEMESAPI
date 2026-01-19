@@ -69,6 +69,29 @@ namespace ISEMES.API.Controllers
             var inventory = await _moveInventoryService.GetCheckinCheckoutAsync(lotNumber);
             return Ok(inventory);
         }
+        [HttpPost("validateBadge")]
+        public async Task<EmployeeDetails?> ValidateBadge(string badge)
+        {
+            return await _moveInventoryService.ValidateBadge(badge);
+        }
+
+        [HttpGet("getCheckInCheckOutLotDetails")]
+        public async Task<IActionResult> GetCheckInCheckOutLotDetails([FromQuery] string? lotNumber, [FromQuery] int employeeId, [FromQuery] int customerLoginId, [FromQuery] string requestType, [FromQuery] int? count)
+        {
+            var lotDetails = await _moveInventoryService.GetCheckInCheckOutLotDetailsAsync(lotNumber, employeeId, customerLoginId, requestType, count);
+            return Ok(lotDetails);
+        }
+        [HttpGet("getLastTenCheckOutLotDetails")]
+        public async Task<IActionResult> GetLastTenCheckOutLotDetailsAsync()
+        {
+            var lotDetails = await _moveInventoryService.GetLastTenCheckOutLotDetailsAsync();
+            return Ok(lotDetails);
+        }
+        [HttpPost("saveCheckInCheckOutRequest")]
+        public async Task<bool> SaveCheckInRequest([FromBody] CheckInCheckOutRequest request)
+        {
+            return await _moveInventoryService.SaveCheckInCheckOutRequest(request.InputJson, request.RequestType);
+        }
     }
 }
 

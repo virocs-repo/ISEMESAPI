@@ -41,6 +41,35 @@ namespace ISEMES.Services
         {
             return await _repository.GetCheckinCheckoutAsync(lotNumber);
         }
+        public async Task<EmployeeDetails?> ValidateBadge(string badge)
+        {
+            return await _repository.ValidateBadge(badge);
+        }
+
+        public async Task<List<CheckInCheckOutLotDetails>> GetCheckInCheckOutLotDetailsAsync(string lotNumber, int employeeId, int customerLoginId, string requestType, int? count)
+        {
+            return await _repository.GetCheckInCheckOutLotDetailsAsync(lotNumber, employeeId, customerLoginId, requestType, count);
+        }
+        public async Task<List<CheckInCheckOutLotDetails>> GetLastTenCheckOutLotDetailsAsync()
+        {
+            return await _repository.GetLastTenCheckOutLotDetailsAsync();
+        }
+        public async Task<bool> SaveCheckInCheckOutRequest(string inputData, string requestType)
+        {
+            return await _repository.SaveCheckInCheckOutRequest(inputData, requestType);
+        }
+        public async Task<List<CheckInCheckOutLotDetails>> GetLotsPendingApprovalAsync(string requestType, int requestId)
+        {
+            return await _repository.GetLotsPendingApprovalAsync(requestType, requestId);
+        }
+        public async Task<List<CheckInCheckOutLocation>> GetCheckInLocationsAsync(string requestType, int requestId)
+        {
+            return await _repository.GetCheckInLocationsAsync(requestType, requestId);
+        }
+        public async Task<bool> ApproveCheckInCheckOut(string requestType, string inputData)
+        {
+            return await _repository.ApproveCheckInCheckOut(requestType, inputData);
+        }
     }
 }
 

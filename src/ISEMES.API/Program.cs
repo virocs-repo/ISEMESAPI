@@ -43,11 +43,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 // Add DbContext services
 builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("InventoryConnection")));
+        options.UseSqlServer(builder.Configuration.GetConnectionString("InventoryConnection")), ServiceLifetime.Scoped);
 builder.Services.AddDbContext<TFSDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("InventoryTFS_Prod2Connection")));
-builder.Services.AddDbContext<InventoryDBContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("InventoryConnection")));
+        options.UseSqlServer(builder.Configuration.GetConnectionString("InventoryTFS_Prod2Connection")), ServiceLifetime.Scoped);
 
 // Register the services
 builder.Services.AddScoped<TokenProvider>();
