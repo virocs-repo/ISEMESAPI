@@ -97,8 +97,13 @@ namespace ISEMES.Repositories
                 request.CountryOfOriginId = null;
             if (request.MaterialDescriptionId.HasValue && request.MaterialDescriptionId.Value <= 0)
                 request.MaterialDescriptionId = null;
-            if (request.USHTSCodeId.HasValue && request.USHTSCodeId.Value <= 0)
-                request.USHTSCodeId = null;
+            // USHTSCodeId: Convert null, -1, or 0 to 0 to match TFS behavior
+            // TFS uses non-nullable int, so UtilityClass.ToInteger returns 0 (not -1) when nothing is selected
+            // The stored procedure expects the field to be present in XML even if it's 0
+            // We must always serialize 0 (not null) to match TFS behavior where 0 means "not set"
+            // Valid IDs (> 0) are kept as-is
+            if (!request.USHTSCodeId.HasValue || request.USHTSCodeId.Value <= 0)
+                request.USHTSCodeId = 0;
             if (request.ECCNId.HasValue && request.ECCNId.Value <= 0)
                 request.ECCNId = null;
             if (request.LicenseExceptionId.HasValue && request.LicenseExceptionId.Value <= 0)
