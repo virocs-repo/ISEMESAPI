@@ -110,6 +110,10 @@ builder.Services.AddScoped<ISplitMergeService, SplitMergeService>();
 builder.Services.AddScoped<IDeviceMasterRepository, DeviceMasterRepository>();
 builder.Services.AddScoped<IDeviceMasterService, DeviceMasterService>();
 
+// Probe Card (Hardware)
+builder.Services.AddScoped<IProbeCardRepository, ProbeCardRepository>();
+builder.Services.AddScoped<IProbeCardService, ProbeCardService>();
+
 // Configure JSON serialization to use camelCase for property names
 // This ensures frontend camelCase properties (e.g., usHtsCodeId) map correctly to backend PascalCase (USHTSCodeId)
 builder.Services.AddControllers()
@@ -142,6 +146,13 @@ builder.Services.AddSwaggerGen(c =>
         Title = "ISEMES Device Master API", 
         Version = "v1",
         Description = "API for Device Master Management"
+    });
+    
+    c.SwaggerDoc("hardware", new OpenApiInfo 
+    { 
+        Title = "ISEMES Hardware API", 
+        Version = "v1",
+        Description = "API for Hardware Management"
     });
 
     // Configure Swagger to use the Authorization header with Bearer token
@@ -181,6 +192,7 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/inventory/swagger.json", "ISEMES Inventory API");
     c.SwaggerEndpoint("/swagger/ticketing/swagger.json", "ISEMES Ticketing API");
     c.SwaggerEndpoint("/swagger/devicemaster/swagger.json", "ISEMES Device Master API");
+    c.SwaggerEndpoint("/swagger/hardware/swagger.json", "ISEMES Hardware API");
 });
 
 app.UseHttpsRedirection();
