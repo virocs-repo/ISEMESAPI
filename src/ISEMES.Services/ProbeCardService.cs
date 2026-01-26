@@ -54,6 +54,30 @@ namespace ISEMES.Services
             return result;
         }
 
+        public async Task<List<CorrelationSearchResponse>> SearchCorrelation(CorrelationSearchRequest request)
+        {
+            var dataTable = await _repository.SearchCorrelation(request);
+            var result = new List<CorrelationSearchResponse>();
+            if (dataTable == null || dataTable.Rows == null) return result;
+            foreach (DataRow row in dataTable.Rows)
+            {
+                var masterId = SafeGetInt32(row, "MasterId");
+                var exId = SafeGetInt32(row, "ExEquipmentId");
+                if (exId == 0) exId = SafeGetInt32(row, "CorrelationId");
+                if (exId == 0) exId = masterId;
+                result.Add(new CorrelationSearchResponse
+                {
+                    MasterId = masterId,
+                    ExEquipmentId = exId,
+                    ISEId = SafeGetString(row, "ISEID") ?? SafeGetString(row, "ISEId"),
+                    CustomerName = SafeGetString(row, "CustomerName"),
+                    HardwareType = SafeGetString(row, "HardwareType"),
+                    Location = SafeGetString(row, "Location")
+                });
+            }
+            return result;
+        }
+
         public async Task<ProbeCardDetailsResponse> GetProbeCardDetails(int masterId)
         {
             var dataSet = await _repository.GetProbeCardDetails(masterId);

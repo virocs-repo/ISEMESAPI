@@ -14,5 +14,6 @@ namespace ISEMES.Repositories
         Task<DataTable> GetSlots(int? hardwareTypeId, string? platformId);
         Task<DataTable> GetSubSlots(int slotId);
         Task<DataTable> GetLocationsInfo(int subSlotId);
+        Task<DataTable> SearchCorrelation(CorrelationSearchRequest request);
     }
 }

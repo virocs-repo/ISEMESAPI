@@ -135,4 +135,29 @@ namespace ISEMES.Models
         public string? ISEID { get; set; }
         public int SubSlotId { get; set; }
     }
+
+    /// <summary>Request for Correlation (WSCorrelation) search used in probe card picker.</summary>
+    public class CorrelationSearchRequest
+    {
+        public int? CustomerId { get; set; } = -1;
+        public string? ISEId { get; set; } = string.Empty;
+        public string? CustomerHWId { get; set; } = string.Empty;
+        /// <summary>Hardware type for Correlation (e.g. 9 = WSCorrelation).</summary>
+        public int HardwareTypeId { get; set; } = 9;
+        /// <summary>1 = external/customer, 0 = ISE Labs.</summary>
+        public int IsISE { get; set; } = 1;
+        public int IsActive { get; set; } = 1;
+        public bool IsPicker { get; set; } = true;
+    }
+
+    /// <summary>Correlation item returned from search for multi-select picker.</summary>
+    public class CorrelationSearchResponse
+    {
+        public int MasterId { get; set; }
+        public int ExEquipmentId { get; set; }
+        public string? ISEId { get; set; }
+        public string? CustomerName { get; set; }
+        public string? HardwareType { get; set; }
+        public string? Location { get; set; }
+    }
 }

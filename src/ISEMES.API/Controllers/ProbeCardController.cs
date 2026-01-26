@@ -179,5 +179,24 @@ namespace ISEMES.API.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
+        [HttpGet("correlation/search")]
+        [ProducesResponseType(typeof(List<CorrelationSearchResponse>), 200)]
+        [ProducesResponseType(typeof(string), 400)]
+        [ProducesResponseType(typeof(string), 500)]
+        public async Task<IActionResult> SearchCorrelation([FromQuery] CorrelationSearchRequest request)
+        {
+            try
+            {
+                if (request.HardwareTypeId == 0) request.HardwareTypeId = 9;
+                var result = await _probeCardService.SearchCorrelation(request);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching correlations");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
     }
 }

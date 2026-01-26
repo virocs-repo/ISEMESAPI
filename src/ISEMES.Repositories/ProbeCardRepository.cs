@@ -114,6 +114,36 @@ namespace ISEMES.Repositories
             }
         }
 
+        public async Task<DataTable> SearchCorrelation(CorrelationSearchRequest request)
+        {
+            using (var connection = new SqlConnection(GetConnectionString()))
+            {
+                await connection.OpenAsync();
+                using (var command = new SqlCommand("HW_SearchCorrelation", connection))
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    if (request.CustomerId.HasValue && request.CustomerId.Value != -1)
+                        command.Parameters.AddWithValue("@CustomerId", request.CustomerId.Value);
+                    else
+                        command.Parameters.AddWithValue("@CustomerId", DBNull.Value);
+                    command.Parameters.AddWithValue("@HardwareTypeId", request.HardwareTypeId);
+                    command.Parameters.AddWithValue("@ISEId", string.IsNullOrEmpty(request.ISEId) ? DBNull.Value : request.ISEId);
+                    command.Parameters.AddWithValue("@Customer_NO", string.IsNullOrEmpty(request.CustomerHWId) ? DBNull.Value : request.CustomerHWId);
+                    command.Parameters.AddWithValue("@IsExternal", DBNull.Value);
+                    command.Parameters.AddWithValue("@IsISE", request.IsISE);
+                    command.Parameters.AddWithValue("@Active", request.IsActive);
+                    command.Parameters.AddWithValue("@IsPicker", request.IsPicker);
+
+                    using (var adapter = new SqlDataAdapter(command))
+                    {
+                        var dataSet = new DataSet();
+                        adapter.Fill(dataSet);
+                        return dataSet.Tables.Count > 0 ? dataSet.Tables[0] : new DataTable();
+                    }
+                }
+            }
+        }
+
         public async Task<DataTable> GetPlatforms()
         {
             using (var connection = new SqlConnection(GetConnectionString()))
