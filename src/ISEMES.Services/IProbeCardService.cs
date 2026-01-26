@@ -1,13 +1,12 @@
 using ISEMES.Models;
 
-using ISEMES.Models;
-
 namespace ISEMES.Services
 {
     public interface IProbeCardService
     {
         Task<List<ProbeCardResponse>> SearchProbeCard(ProbeCardSearchRequest request);
         Task<ProbeCardDetailsResponse> GetProbeCardDetails(int masterId);
+        Task<List<CorrelationSearchResponse>> SearchCorrelation(CorrelationSearchRequest request);
         Task<List<MasterDataItem>> GetPlatforms();
         Task<List<MasterDataItem>> GetProbeCardTypes();
         Task<List<MasterDataItem>> GetProbers();
